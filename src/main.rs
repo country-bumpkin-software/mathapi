@@ -1,8 +1,10 @@
 use std::collections::{HashMap};
 use axum::{routing::get, Router, Json};
 use std::net::SocketAddr;
+use axum::http::Method;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use tower_http::cors::{Any, CorsLayer};
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
 struct Question {
@@ -10,11 +12,18 @@ struct Question {
 }
 #[tokio::main]
 async fn main() {
+    let cors = CorsLayer::new()
+        // allow `GET` and `POST` when accessing the resource
+        .allow_methods([Method::GET])
+        // allow requests from any origin
+        .allow_origin(Any);
+
     let app = Router::new().fallback(
         fallback
     ).route("/", get(handler))
         .route("/random", get(get_random_number))
-        .route("/maths_addition", get(return_questions));
+        .route("/maths_addition", get(return_questions))
+        .layer(cors);;
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 8088));
 
