@@ -1,0 +1,13 @@
+[package]
+name = "axummy"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+axum = "0.6.20"
+rand = "0.8.5"
+tokio = { version = "1", features = ["full"] }
+base64 = "0.21.4"
+serde = { version = "1.0.189", features = ["derive"] }
