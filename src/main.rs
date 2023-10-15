@@ -16,7 +16,7 @@ async fn main() {
         .route("/random", get(get_random_number))
         .route("/maths_addition", get(return_questions));
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 8088));
 
     axum::Server::bind(&addr)
         // Hyper server takes a make service.
@@ -46,7 +46,7 @@ async fn return_questions() -> Json<Question> {
 async fn generate_questions() -> Question{
     let mut rng = rand::thread_rng();
     let mut question = Question{ question: Default::default() };
-    for _ in 1..10 {
+    while question.question.len() < 10 {
         let mut x = rng.gen_range(1..20);
         let mut y = rng.gen_range(1..20);
         let questionString = format!("{}+{}", x,y);
