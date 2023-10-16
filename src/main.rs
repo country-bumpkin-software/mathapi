@@ -1,11 +1,16 @@
-use std::collections::{HashMap};
-use axum::{routing::get, Router, Json};
-use std::net::SocketAddr;
 use axum::http::Method;
+use axum::{routing::get, Json, Router};
 use rand::Rng;
-use serde::{Deserialize, Serialize};
+use serde::{Serialize, Deserialize};
+use std::collections::HashMap;
+use std::net::SocketAddr;
+use axum::extract::Query;
 use tower_http::cors::{Any, CorsLayer};
 
+#[derive(Deserialize)]
+struct MathOperation {
+    operation: String,
+}
 #[derive(Debug, PartialEq, Eq, Serialize)]
 struct Question {
     question: HashMap<String, String>,
@@ -19,12 +24,12 @@ async fn main() {
         .allow_origin(Any)
         .allow_headers(Any);
 
-    let app = Router::new().fallback(
-        fallback
-    ).route("/", get(handler))
-        .route("/random", get(get_random_number))
+    let app = Router::new()
+        .fallback(fallback)
+        .route("/", get(handler))
         .route("/maths_addition", get(return_questions))
-        .layer(cors);;
+        .route("/maths_problems", get(return_maths_questions))
+        .layer(cors);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 8088));
 
@@ -41,29 +46,61 @@ async fn handler() -> String {
 async fn fallback() -> String {
     "Didnt match any route".into()
 }
-async fn get_random_number() -> String {
-    use rand::Rng;
-    let num= rand::random::<u16>();
-
-    num.to_string()
-}
 
 async fn return_questions() -> Json<Question> {
     let res = generate_questions().await;
     Json(res)
 }
 
-async fn generate_questions() -> Question{
+async fn return_maths_questions(operation: Query<MathOperation>) -> Json<Question> {
+    let op = operation.0;
+    let res = generate_custom_questions(op.operation.as_str()).await;
+    Json(res)
+}
+
+async fn generate_questions() -> Question {
     let mut rng = rand::thread_rng();
-    let mut question = Question{ question: Default::default() };
+    let mut question = Question {
+        question: Default::default(),
+    };
     while question.question.len() < 10 {
-        let mut x = rng.gen_range(1..20);
-        let mut y = rng.gen_range(1..20);
-        let questionString = format!("{}+{}", x,y);
-        let mut answer = x + y;
-        if !question.question.contains_key(&questionString) {
+        let x = rng.gen_range(1..20);
+        let y = rng.gen_range(1..20);
+        let question_string = format!("{}+{}", x, y);
+        let answer = x + y;
+        if !question.question.contains_key(&question_string) {
             // Insert the key-value pair into the HashMap
-            question.question.insert(questionString.clone(), answer.to_string());
+            question
+                .question
+                .insert(question_string.clone(), answer.to_string());
+        } else {
+            println!("Key already exists in the HashMap!");
+        }
+        println!("{:?}", question);
+    }
+    question
+}
+
+async fn generate_custom_questions(mode: &str) -> Question {
+    let mut rng = rand::thread_rng();
+    let mut question = Question {
+        question: Default::default(),
+    };
+    while question.question.len() < 10 {
+        let x = rng.gen_range(1..20);
+        let y = rng.gen_range(1..20);
+        let (answer, question_string) = match mode {
+            "add" => (x + y, format!("{}+{}", x, y)),
+            "subtract" => (x - y, format!("{}-{}", x, y)),
+            "divide" => (x / y, format!("{}/{}", x, y)),
+            "multiple" => (x * y, format!("{}*{}", x, y)),
+            _ => (0, format!("unrecognised maths operation error")),
+        };
+        if !question.question.contains_key(&question_string) {
+            // Insert the key-value pair into the HashMap
+            question
+                .question
+                .insert(question_string.clone(), answer.to_string());
         } else {
             println!("Key already exists in the HashMap!");
         }
