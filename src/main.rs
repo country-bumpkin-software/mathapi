@@ -1,10 +1,10 @@
+use axum::extract::Query;
 use axum::http::Method;
 use axum::{routing::get, Json, Router};
 use rand::Rng;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use axum::extract::Query;
 use tower_http::classify::GrpcFailureClass::Error;
 use tower_http::cors::{Any, CorsLayer};
 
@@ -22,6 +22,9 @@ struct ErrorResponse {
 struct Question {
     question: HashMap<String, String>,
 }
+
+#[derive(Debug, PartialEq, Eq, Serialize, Clone)]
+struct QuestionResponse((String, String));
 #[tokio::main]
 async fn main() {
     let cors = CorsLayer::new()
@@ -59,16 +62,20 @@ async fn return_questions() -> Json<Question> {
     Json(res)
 }
 
-async fn return_maths_questions(operation: Query<MathOperation>) -> Result<Json<Question>, Json<ErrorResponse>> {
+async fn return_maths_questions(
+    operation: Query<MathOperation>,
+) -> Result<Json<Vec<QuestionResponse>>, Json<ErrorResponse>> {
     let op = operation.0;
     match op.operation.as_str() {
         "add" => (),
         "subtract" => (),
-        "divide"=> (),
-        "multiply"=> (),
+        "divide" => (),
+        "multiply" => (),
         _ => {
             let error_response = ErrorResponse {
-                error: format!("Unrecognised query parameters, please use: add, subtract, divide or multiply"),
+                error: format!(
+                    "Unrecognised query parameters, please use: add, subtract, divide or multiply"
+                ),
             };
             return Err(Json(error_response));
         }
@@ -104,12 +111,12 @@ async fn generate_questions() -> Question {
         } else {
             println!("Key already exists in the HashMap!");
         }
-        println!("{:?}", question);
     }
     question
 }
 
-async fn generate_custom_questions(mode: &str) -> Result<Question, axum::Error> {
+async fn generate_custom_questions(mode: &str) -> Result<Vec<QuestionResponse>, axum::Error> {
+    let mut question_vec: Vec<QuestionResponse> = Vec::new();
     let mut rng = rand::thread_rng();
     let mut question = Question {
         question: Default::default(),
@@ -135,5 +142,8 @@ async fn generate_custom_questions(mode: &str) -> Result<Question, axum::Error> 
             println!("Tried to enter a duplicate key.");
         }
     }
-    Ok(question)
+    for (key, value) in &question.question {
+        question_vec.push(QuestionResponse((key.to_string(), value.to_string())));
+    }
+    Ok(question_vec)
 }
